@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Avatar Demo - Table 1</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .header {
+      background: white;
+      padding: 24px;
+      border-radius: 16px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    h1 { font-size: 32px; color: #1f2937; margin-bottom: 8px; }
+    .status {
+      display: inline-block;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+      margin-top: 12px;
+    }
+    .status-active { background: #10b981; color: white; }
+    .status-inactive { background: #6b7280; color: white; }
+    .main-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+    .avatar-section {
+      background: #000;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      min-height: 600px;
+    }
+    #avatar-video {
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+      object-fit: cover;
+    }
+    .avatar-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 500px;
+      color: #6b7280;
+      font-size: 120px;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    .card h2 { font-size: 20px; color: #1f2937; margin-bottom: 16px; }
+    .btn {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-bottom: 12px;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn-primary { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; }
+    .btn-danger { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; }
+    .btn-secondary { background: #f3f4f6; color: #374151; }
+    .input-group { margin-bottom: 12px; }
+    .input-group input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .phrase-btn {
+      width: 100%;
+      padding: 12px;
+      background: #f3f4f6;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: left;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    .phrase-btn:hover { background: #e5e7eb; }
+    .log {
+      background: #1f2937;
+      color: #10b981;
+      padding: 16px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    @media (max-width: 768px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🍽️ Restaurant Avatar Demo</h1>
+      <div class="status status-inactive" id="status">Disconnected</div>
+    </div>
+
+    <div class="main-grid">
+      <div class="avatar-section">
+        <video id="avatar-video" autoplay playsinline style="display: none;"></video>
+        <div id="avatar-placeholder" class="avatar-placeholder">
+          <div>🎭</div>
+          <div style="font-size: 16px; margin-top: 20px;">Click "Start Avatar" to begin</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h2>Session Control</h2>
+          <button class="btn btn-primary" id="btn-start">▶️ Start Avatar</button>
+          <button class="btn btn-danger" id="btn-stop" style="display: none;">⏹️ Stop Avatar</button>
+        </div>
+
+        <div class="card">
+          <h2>Chat with Avatar</h2>
+          <div class="input-group">
+            <input type="text" id="chat-input" placeholder="Type a message..." disabled />
+          </div>
+          <button class="btn btn-secondary" id="btn-send" disabled>💬 Send</button>
+          
+          <h3 style="margin: 20px 0 12px 0; font-size: 16px; color: #6b7280;">Quick Phrases:</h3>
+          <button class="phrase-btn" data-phrase="Hello! What's on the menu?">👋 Greeting</button>
+          <button class="phrase-btn" data-phrase="I'd like a burger and coke">🍔 Order</button>
+          <button class="phrase-btn" data-phrase="What do you recommend?">💡 Recommendation</button>
+        </div>
+
+        <div class="card">
+          <h2>Activity Log</h2>
+          <div class="log" id="log"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:3000/api/demo';
+    let peerConnection = null;
+    let isActive = false;
+
+    const statusEl = document.getElementById('status');
+    const avatarVideo = document.getElementById('avatar-video');
+    const avatarPlaceholder = document.getElementById('avatar-placeholder');
+    const btnStart = document.getElementById('btn-start');
+    const btnStop = document.getElementById('btn-stop');
+    const chatInput = document.getElementById('chat-input');
+    const btnSend = document.getElementById('btn-send');
+    const logEl = document.getElementById('log');
+
+    function log(msg) {
+      const entry = document.createElement('div');
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function updateUI(active) {
+      isActive = active;
+      statusEl.textContent = active ? 'Active' : 'Disconnected';
+      statusEl.className = `status status-${active ? 'active' : 'inactive'}`;
+      btnStart.style.display = active ? 'none' : 'block';
+      btnStop.style.display = active ? 'block' : 'none';
+      chatInput.disabled = !active;
+      btnSend.disabled = !active;
+      avatarPlaceholder.style.display = active ? 'none' : 'flex';
+      avatarVideo.style.display = active ? 'block' : 'none';
+    }
+
+    async function startSession() {
+      try {
+        log('Starting avatar...');
+        btnStart.disabled = true;
+
+        const res = await fetch(`${API_BASE}/start`, { method: 'POST' });
+        const data = await res.json();
+        
+        if (!data.success) throw new Error(data.error);
+        
+        log('Session created: ' + data.session.sessionId);
+        await setupWebRTC(data.session);
+        updateUI(true);
+        
+        setTimeout(() => sendMessage('Hello! Welcome to our restaurant.'), 1000);
+      } catch (error) {
+        log('Error: ' + error.message);
+        btnStart.disabled = false;
+      }
+    }
+
+    async function setupWebRTC(session) {
+      peerConnection = new RTCPeerConnection({
+        iceServers: session.iceServers || [{ urls: 'stun:stun.l.google.com:19302' }],
+      });
+
+      peerConnection.ontrack = (event) => {
+        log('Avatar stream received');
+        avatarVideo.srcObject = event.streams[0];
+      };
+
+      await peerConnection.setRemoteDescription({ type: 'offer', sdp: session.sdp });
+      const answer = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answer);
+      log('WebRTC connected');
+    }
+
+    async function stopSession() {
+      try {
+        await fetch(`${API_BASE}/stop`, { method: 'POST' });
+        if (peerConnection) peerConnection.close();
+        updateUI(false);
+        log('Session stopped');
+      } catch (error) {
+        log('Error: ' + error.message);
+      }
+    }
+
+    async function sendMessage(msg) {
+      if (!msg.trim()) return;
+      try {
+        log('You: ' + msg);
+        const res = await fetch(`${API_BASE}/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: msg }),
+        });
+        const data = await res.json();
+        if (data.success) log('Avatar: ' + data.response);
+        chatInput.value = '';
+      } catch (error) {
+        log('Error: ' + error.message);
+      }
+    }
+
+    btnStart.addEventListener('click', startSession);
+    btnStop.addEventListener('click', stopSession);
+    btnSend.addEventListener('click', () => sendMessage(chatInput.value));
+    chatInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendMessage(chatInput.value);
+    });
+
+    document.querySelectorAll('.phrase-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (isActive) sendMessage(btn.getAttribute('data-phrase'));
+      });
+    });
+
+    log('Demo ready. Click Start Avatar.');
+  </script>
+</body>
+</html>

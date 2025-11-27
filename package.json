@@ -1,0 +1,23 @@
+{
+  "name": "restaurant-avatar-demo",
+  "version": "1.0.0",
+  "description": "Single table avatar demo with HeyGen + Gemini",
+  "main": "src/demo-server.js",
+  "scripts": {
+    "start": "node src/demo-server.js",
+    "test": "node test-credentials.js",
+    "dev": "nodemon src/demo-server.js"
+  },
+  "keywords": ["avatar", "restaurant", "heygen", "gemini", "ai"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
