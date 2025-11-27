@@ -20,17 +20,23 @@ app.post('/api/demo/start', async (req, res) => {
     console.log('🎬 Starting demo avatar session...');
 
     // Step 1: Initialize HeyGen streaming session
+    const payload = {
+      avatar_id: process.env.HEYGEN_AVATAR_ID,
+      quality: 'medium',
+      version: 'v2',
+    };
+    
+    // Only add voice if HEYGEN_VOICE_ID is set and valid
+    if (process.env.HEYGEN_VOICE_ID && process.env.HEYGEN_VOICE_ID.trim() !== '') {
+      payload.voice = {
+        voice_id: process.env.HEYGEN_VOICE_ID,
+        rate: 1.0,
+      };
+    }
+    
     const heygenResponse = await axios.post(
       'https://api.heygen.com/v1/streaming.new',
-      {
-        avatar_id: process.env.HEYGEN_AVATAR_ID,
-        quality: 'medium',
-        voice: {
-          voice_id: process.env.HEYGEN_VOICE_ID,
-          rate: 1.0,
-        },
-        version: 'v2',
-      },
+      payload,
       {
         headers: {
           'X-Api-Key': process.env.HEYGEN_API_KEY,
@@ -54,10 +60,27 @@ app.post('/api/demo/start', async (req, res) => {
       session: currentSession,
     });
   } catch (error) {
-    console.error('❌ Failed to start session:', error.response?.data || error.message);
-    res.status(500).json({
+    const errorData = error.response?.data || {};
+    const errorMessage = errorData.message || error.message || 'Unknown error';
+    const errorCode = errorData.code || error.response?.status;
+    
+    console.error('❌ Failed to start session:', errorMessage);
+    console.error('   Error details:', JSON.stringify(errorData));
+    
+    // Provide helpful error messages
+    let userMessage = errorMessage;
+    if (errorMessage.includes('avatar not found') || errorMessage.includes('Avatar not found')) {
+      userMessage = `Avatar not found or not configured as Interactive Avatar. Please check your HEYGEN_AVATAR_ID in .env file. Current value: ${process.env.HEYGEN_AVATAR_ID || 'not set'}`;
+    } else if (error.response?.status === 404) {
+      userMessage = 'HeyGen API endpoint not found. Please check the API documentation.';
+    } else if (error.response?.status === 401 || error.response?.status === 403) {
+      userMessage = 'Invalid HeyGen API key. Please check your HEYGEN_API_KEY in .env file.';
+    }
+    
+    res.status(error.response?.status || 500).json({
       success: false,
-      error: error.response?.data || error.message,
+      error: userMessage,
+      details: errorData,
     });
   }
 });
@@ -120,7 +143,7 @@ app.post('/api/demo/chat', async (req, res) => {
 
     // Simple Gemini API call
     const geminiResponse = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
         contents: [
           {

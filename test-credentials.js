@@ -12,7 +12,7 @@ async function testHeyGen() {
   
   try {
     const response = await axios.get(
-      'https://api.heygen.com/v1/user.credit',
+      'https://api.heygen.com/v2/user.credit',
       {
         headers: {
           'X-Api-Key': process.env.HEYGEN_API_KEY,
@@ -37,7 +37,7 @@ async function testGemini() {
   
   try {
     const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
         contents: [{ parts: [{ text: 'Say hello' }] }],
       }
